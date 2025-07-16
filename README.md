@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="icon.ico" width="30%" alt="icon" />
+
 # 一言(Hitokoto)命令行工具
+
+</div>
 
 > [!note]
 > 这不是一言官方提供的命令行工具！本项目和一言官方无关。
@@ -15,6 +21,11 @@
 - 支持导出多条语句到文件
 - 完整的日志记录功能
 
+## 自行构建
+
+<details>
+<summary>点击展开自行构建说明</summary>
+
 ### 项目依赖
 
 运行依赖
@@ -28,11 +39,7 @@
 开发依赖
 - pyinstaller>=5.6.2 （用于构建可执行文件）
 
-## 自行构建
-
-<details>
-<summary>点击展开自行构建说明</summary>
-
+### 克隆项目
 首先请下载或克隆本仓库
 ```bash
 git clone https://github.com/MiaowCham/hitokoto-cli.git
@@ -119,7 +126,8 @@ python hitokoto_cli.py -g
 这将从一言官方源下载语句包到本地。
 
 ### 示例
-
+<details>
+<summary>点击展开示例</summary>
 1. 获取一条动画类型的语句，并显示来源：
 
 ```bash
@@ -143,6 +151,8 @@ python hitokoto_cli.py --encode json
 ```bash
 python hitokoto_cli.py -a in
 ```
+
+</details>
 
 ## 语句类型说明
 
