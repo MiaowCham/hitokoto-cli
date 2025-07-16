@@ -11,6 +11,70 @@ import sys
 import subprocess
 import shutil
 from pathlib import Path
+import tempfile
+
+
+def create_version_file(script_dir, version):
+    """创建Windows版本信息文件
+    
+    Args:
+        script_dir: 脚本目录
+        version: 版本号
+    
+    Returns:
+        str: 版本文件路径
+    """
+    version_content = f'''# UTF-8
+#
+# For more details about fixed file info 'ffi' see:
+# http://msdn.microsoft.com/en-us/library/ms646997.aspx
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
+    # Set not needed items to zero 0.
+    filevers=({version.replace('.', ', ')}, 0),
+    prodvers=({version.replace('.', ', ')}, 0),
+    # Contains a bitmask that specifies the valid bits 'flags'r
+    mask=0x3f,
+    # Contains a bitmask that specifies the Boolean attributes of the file.
+    flags=0x0,
+    # The operating system for which this file was designed.
+    # 0x4 - NT and there is no need to change it.
+    OS=0x4,
+    # The general type of file.
+    # 0x1 - the file is an application.
+    fileType=0x1,
+    # The function of the file.
+    # 0x0 - the function is not defined for this fileType
+    subtype=0x0,
+    # Creation date and time stamp.
+    date=(0, 0)
+    ),
+  kids=[
+    StringFileInfo(
+      [
+      StringTable(
+        u'080404B0',
+        [StringStruct(u'CompanyName', u'Hitokoto-Cli'),
+        StringStruct(u'FileDescription', u'一个简单的命令行工具，用于获取和显示一言(Hitokoto)语句。支持从在线API获取或使用本地语句包。'),
+        StringStruct(u'FileVersion', u'{version}'),
+        StringStruct(u'InternalName', u'hitokoto'),
+        StringStruct(u'LegalCopyright', u'MIT License'),
+        StringStruct(u'OriginalFilename', u'hitokoto.exe'),
+        StringStruct(u'ProductName', u'Hitokoto-Cli'),
+        StringStruct(u'ProductVersion', u'{version}'),
+        StringStruct(u'Language', u'中文')])
+      ]), 
+    VarFileInfo([VarStruct(u'Translation', [2052, 1200])])
+  ]
+)'''
+    
+    # 创建临时版本文件
+    version_file = script_dir / "version_info.txt"
+    with open(version_file, 'w', encoding='utf-8') as f:
+        f.write(version_content)
+    
+    return str(version_file)
 
 
 def check_pyinstaller():
@@ -91,6 +155,14 @@ def build_executable(args):
         separator = ";" if sys.platform.startswith("win") else ":"
         add_data_option = [f"--add-data=LICENSE{separator}."]
     
+    # 检查图标文件
+    icon_file = script_dir / "icon.ico"
+    if not icon_file.exists():
+        print("警告: 图标文件icon.ico不存在，将不会设置应用程序图标")
+        icon_option = []
+    else:
+        icon_option = ["--icon=icon.ico"]
+    
     # 根据参数决定构建模式
     build_mode = "--onefile" if args.onefile else "--onedir"
     
@@ -102,6 +174,16 @@ def build_executable(args):
         "--clean",
         "--noconfirm",
     ]
+    
+    # 添加图标参数（如果图标文件存在）
+    cmd.extend(icon_option)
+    
+    # 添加版本信息（仅在Windows下有效）
+    if hasattr(args, 'version') and args.version and sys.platform.startswith("win"):
+        version_info = [
+            f"--version-file={create_version_file(script_dir, args.version)}"
+        ]
+        cmd.extend(version_info)
     
     # 添加LICENSE文件（如果存在）
     cmd.extend(add_data_option)
@@ -115,6 +197,16 @@ def build_executable(args):
     try:
         subprocess.check_call(cmd)
         print("构建成功!")
+        
+        # 清理临时版本文件
+        if hasattr(args, 'version') and args.version and sys.platform.startswith("win"):
+            version_file = script_dir / "version_info.txt"
+            if version_file.exists():
+                try:
+                    version_file.unlink()
+                    print("已清理临时版本文件")
+                except Exception as e:
+                    print(f"清理版本文件失败: {e}")
         
         # 根据构建模式输出可执行文件路径
         if args.onefile:
@@ -131,6 +223,8 @@ def build_executable(args):
                 exe_path = dist_dir / "hitokoto" / "hitokoto"
         
         print(f"可执行文件位于: {exe_path}")
+        if hasattr(args, 'version') and args.version:
+            print(f"版本信息: {args.version}")
         return True
     except subprocess.CalledProcessError as e:
         print(f"构建失败: {e}")
@@ -149,6 +243,7 @@ def main():
     parser = argparse.ArgumentParser(description="构建一言(Hitokoto)命令行工具的可执行文件")
     parser.add_argument("--force", action="store_true", help="强制重新安装PyInstaller")
     parser.add_argument("--skip-check", action="store_true", help="跳过PyInstaller检查")
+    parser.add_argument("-v", "--version", type=str, help="设置可执行文件的版本号（例如：1.0.0）")
     
     # 添加构建模式选项
     build_mode_group = parser.add_mutually_exclusive_group()
@@ -180,10 +275,11 @@ def main():
     if pyinstaller_ok:
         success = build_executable(args)
         if success:
+            version_info = f" (版本: {args.version})" if hasattr(args, 'version') and args.version else ""
             if args.onefile:
-                print("\n构建完成! 可以在dist目录中找到hitokoto.exe单文件可执行程序。")
+                print(f"\n构建完成! 可以在dist目录中找到hitokoto.exe单文件可执行程序{version_info}。")
             else:
-                print("\n构建完成! 可以在dist/hitokoto目录中找到可执行文件及其依赖。")
+                print(f"\n构建完成! 可以在dist/hitokoto目录中找到可执行文件及其依赖{version_info}。")
             return 0
         else:
             print("\n构建失败! 请检查上述错误信息。")
