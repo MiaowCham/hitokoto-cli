@@ -32,7 +32,7 @@
 
 首先请下载或克隆本仓库
 ```bash
-git clone URL_ADDRESS.com/your_username/hitokoto-cli.git
+git clone https://github.com/MiaowCham/hitokoto-cli.git
 cd hitokoto-cli
 ```
 
@@ -71,7 +71,7 @@ python build_exe.py
 ## 使用方法
 
 > [!note]  
-> 前往 [Release](URL_ADDRESS.com/your_username/hitokoto-cli/releases) 可以下载构建好的可执行文件。  
+> 前往 [Release](https://github.com/MiaowCham/hitokoto-cli/releases) 可以下载构建好的可执行文件。  
 > 构建版本请将 `hitokoto_cli.py` 替换为 `.\hitokoto.exe`。  
 > 将构建版本所处目录添加至环境变量 `PATH` 中，即可在任意目录使用 `hitokoto` 命令。
 
