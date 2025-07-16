@@ -55,7 +55,7 @@ VSVersionInfo(
       [
       StringTable(
         u'080404B0',
-        [StringStruct(u'CompanyName', u'Hitokoto-Cli'),
+        [StringStruct(u'CompanyName', u'MiaowCham'),
         StringStruct(u'FileDescription', u'一个简单的命令行工具，用于获取和显示一言(Hitokoto)语句。支持从在线API获取或使用本地语句包。'),
         StringStruct(u'FileVersion', u'{version}'),
         StringStruct(u'InternalName', u'hitokoto'),

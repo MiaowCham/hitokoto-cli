@@ -33,8 +33,9 @@ def get_script_directory():
     """
     logger.debug("获取脚本所在目录")
     # 检查是否在 PyInstaller 环境中运行
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        # 在 PyInstaller 单文件模式下，使用可执行文件所在目录
+    if getattr(sys, 'frozen', False):
+        # 在 PyInstaller 环境下（包括 --onefile 和 --onedir 模式）
+        # 使用可执行文件所在目录
         script_dir = os.path.dirname(sys.executable)
         logger.debug(f"PyInstaller环境，使用可执行文件目录: {script_dir}")
     else:

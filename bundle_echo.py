@@ -18,8 +18,9 @@ from loguru import logger
 def get_bundle_directory():
     """获取语句包目录路径"""
     # 检查是否在 PyInstaller 环境中运行
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        # 在 PyInstaller 单文件模式下，使用可执行文件所在目录
+    if getattr(sys, 'frozen', False):
+        # 在 PyInstaller 环境下（包括 --onefile 和 --onedir 模式）
+        # 使用可执行文件所在目录
         script_dir = os.path.dirname(sys.executable)
     else:
         # 正常 Python 环境，获取脚本所在目录，而不是运行目录
