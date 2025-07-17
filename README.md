@@ -60,7 +60,6 @@ python hitokoto_cli.py
 
 > [!note]
 > 除 Windows x64 平台外，其他平台均未经测试。Github Actions 已经成功在 macOS 14 (arm64) 和 Ubuntu 22.04 上成功构建，但不保证构建产物的可用性。
->
 > 有关构建详的细描述请见 [BUILD.md](BUILD.md)
 
 使用 `build_exe.py` 脚本可以快捷对项目进行构建。
