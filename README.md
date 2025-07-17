@@ -58,34 +58,27 @@ python hitokoto_cli.py
 
 ### 构建可执行文件
 
-如果您想将此工具打包为可执行文件，可以使用提供的构建脚本：
+> [!note]
+> 除 Windows x64 平台外，其他平台均未经测试。Github Actions 已经成功在 macOS 14 (arm64) 和 Ubuntu 22.04 上成功构建，但不保证构建产物的可用性。
+>
+> 有关构建详的细描述请见 [BUILD.md](BUILD.md)
+
+使用 `build_exe.py` 脚本可以快捷对项目进行构建。
 
 ```bash
 python build_exe.py
 ```
+构建完成后，在 `dist` 目录下会生成可执行文件。
 
-默认情况下，这将在 `dist` 目录下生成 `hitokoto.exe` 单文件可执行程序。
-
-构建脚本支持以下参数：
-
-```
---force       强制重新安装PyInstaller
---skip-check  跳过PyInstaller检查
---onefile     使用单文件模式构建（默认）
---onedir      使用目录模式构建
-```
-
-如果使用 `--onedir` 参数，将在 `dist/hitokoto` 目录下生成可执行文件及其依赖文件。
-
-若在项目根目录增加 `icon.ico` 文件，构建脚本将自动使用该图标。
 </details>
 
 ## 使用方法
 
 > [!note]  
-> 前往 [Release](https://github.com/MiaowCham/hitokoto-cli/releases) 可以下载构建好的可执行文件。  
+> 前往 [Release](https://github.com/MiaowCham/hitokoto-cli/releases) 可以下载构建好的 Windows x64 可执行文件。  
+> 或者前往 [Github Actions](https://github.com/MiaowCham/hitokoto-cli/actions/workflows/build.yml) 获取最新的多平台构建。
 > 构建版本请将 `hitokoto_cli.py` 替换为 `.\hitokoto.exe`。  
-> 将构建版本所处目录添加至环境变量 `PATH` 中，即可在任意目录使用 `hitokoto` 命令。
+> 将构建版本所处目录添加至环境变量中，即可在任意目录使用 `hitokoto` 命令。
 
 ### 基本用法
 
@@ -96,6 +89,9 @@ python hitokoto_cli.py
 这将随机显示一条一言语句。
 
 ### 参数说明
+
+<details>
+<summary>点击展开参数说明</summary>
 
 ```
 选项:
@@ -113,6 +109,21 @@ python hitokoto_cli.py
   --help                   显示帮助信息
 ```
 
+### 语句类型说明
+
+- a: 动画
+- b: 漫画
+- c: 游戏
+- d: 文学
+- e: 原创
+- f: 来自网络
+- g: 其他
+- h: 影视
+- i: 诗词
+- j: 网易云
+- k: 哲学
+- l: 抖机灵
+
 ### 获取语句包（可选）
 
 如果您想使用本地语句包（推荐，可离线使用），请运行：
@@ -124,6 +135,8 @@ python hitokoto_cli.py -g
 ```
 
 这将从一言官方源下载语句包到本地。
+
+</details>
 
 ### 示例
 <details>
@@ -153,21 +166,6 @@ python hitokoto_cli.py -a in
 ```
 
 </details>
-
-## 语句类型说明
-
-- a: 动画
-- b: 漫画
-- c: 游戏
-- d: 文学
-- e: 原创
-- f: 来自网络
-- g: 其他
-- h: 影视
-- i: 诗词
-- j: 网易云
-- k: 哲学
-- l: 抖机灵
 
 ## 许可证
 
