@@ -1,0 +1,186 @@
+name: Build Executables
+
+# 只允许手动触发
+on:
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: '构建模式'
+        required: true
+        default: 'onefile'
+        type: choice
+        options:
+          - onefile
+          - onedir
+      create_release:
+        description: '是否创建Release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-2022
+            arch: x86
+            python-version: '3.9'
+            name: windows
+          - platform: windows-2022
+            arch: x64
+            python-version: '3.9'
+            name: windows
+          - platform: macos-latest  # macOS x86_64 架构
+            arch: x64
+            python-version: '3.9'
+            name: macOS
+            target: x86_64-apple-darwin
+          - platform: macos-latest  # macOS arm64 架构
+            arch: arm64
+            python-version: '3.9'
+            name: macOS
+            target: aarch64-apple-darwin
+          - platform: macos-latest  # macOS 通用二进制包
+            arch: universal2
+            python-version: '3.9'
+            name: macOS
+            target: universal-apple-darwin
+          - platform: ubuntu-22.04
+            arch: x64
+            python-version: '3.9'
+            name: linux
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        
+      - name: Build with PyInstaller (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: 1
+        run: |
+          $mode = if ("${{ github.event.inputs.build_mode }}" -eq "onedir") { "--onedir" } else { "--onefile" }
+          python build_exe.py $mode --skip-check
+          
+      - name: Build with PyInstaller (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          MODE=${{ github.event.inputs.build_mode }}
+          if [ "$MODE" = "onedir" ]; then
+            BUILD_ARG="--onedir"
+          else
+            BUILD_ARG="--onefile"
+          fi
+          
+          # macOS Universal2 构建支持
+          if [ "${{ matrix.target }}" = "universal-apple-darwin" ]; then
+            echo "尝试Universal2构建..."
+            if ! python build_exe.py $BUILD_ARG --universal2 --skip-check; then
+              echo "Universal2构建失败，使用当前架构构建..."
+              python build_exe.py $BUILD_ARG --skip-check
+            fi
+          else
+            python build_exe.py $BUILD_ARG --skip-check
+          fi
+        
+      - name: 准备构建产物
+        shell: bash
+        run: |
+          # 创建发布目录
+          mkdir -p release
+          
+          # 获取短提交哈希
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          
+          # 根据平台和构建模式准备文件
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            if [ "${{ github.event.inputs.build_mode }}" = "onedir" ]; then
+              # 目录模式：打包整个目录
+              cd dist
+              7z a -tzip "../release/hitokoto-${{ matrix.name }}-${{ matrix.arch }}-${SHORT_SHA}.zip" hitokoto/
+            else
+              # 单文件模式
+              cp dist/hitokoto.exe "release/hitokoto-${{ matrix.name }}-${{ matrix.arch }}-${SHORT_SHA}.exe"
+            fi
+          else
+            if [ "${{ github.event.inputs.build_mode }}" = "onedir" ]; then
+              # 目录模式：打包整个目录
+              cd dist
+              tar -czf "../release/hitokoto-${{ matrix.name }}-${{ matrix.arch }}-${SHORT_SHA}.tar.gz" hitokoto/
+            else
+              # 单文件模式
+              cp dist/hitokoto "release/hitokoto-${{ matrix.name }}-${{ matrix.arch }}-${SHORT_SHA}"
+            fi
+          fi
+          
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hitokoto-cli-${{ matrix.name }}-${{ matrix.arch }}
+          path: dist/
+        
+  create-release:
+    if: github.event.inputs.create_release == 'true' && always()
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout代码
+      uses: actions/checkout@v4
+      
+    - name: 下载所有构建产物
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        
+    - name: 准备Release文件
+      run: |
+        mkdir -p release-files
+        find artifacts -type f -exec cp {} release-files/ \;
+        ls -la release-files/
+        
+    - name: 创建Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: build-${{ github.sha }}
+        name: 'GitHub Actions构建 - ${{ github.sha }}'
+        body: |
+          ## **自动构建版本**
+          
+          > [!warning]
+          > 这是GitHub Actions自动构建的版本，未经充分测试，可能不稳定或不可用。
+          
+          ### **构建信息**:
+          - 提交: ${{ github.sha }}
+          - 构建时间: ${{ github.event.head_commit.timestamp }}
+          - 构建模式: ${{ github.event.inputs.build_mode }}
+          
+          ### **支持平台**:
+          - Windows (x86/x64)
+          - macOS (Universal2 - Intel + Apple Silicon)
+          - Linux (x64)
+          
+          ### **下载说明**:
+          - Windows用户请下载 `.exe` 文件或 `.zip` 压缩包
+          - macOS用户请下载 `macos-universal2` 文件或压缩包
+          - Linux用户请下载 `linux-x64` 文件或 `.tar.gz` 压缩包
+          
+          ### **使用方法**:
+          下载对应平台的可执行文件后，在终端/命令行中运行即可。
+        files: release-files/*
+        draft: false
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

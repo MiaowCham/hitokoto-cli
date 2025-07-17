@@ -4,26 +4,98 @@
 构建可执行文件脚本
 使用 PyInstaller 构建项目，支持单文件模式(--onefile)和目录模式(--onedir)
 默认使用单文件模式
+支持全平台构建：Windows (x86/x64)、macOS (Intel/Apple Silicon)、Linux
 """
 
 import os
 import sys
 import subprocess
 import shutil
+import platform
 from pathlib import Path
 import tempfile
 
 
-def create_version_file(script_dir, version):
+def detect_platform():
+    """检测当前平台信息
+    
+    Returns:
+        dict: 包含平台信息的字典
+    """
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+    
+    platform_info = {
+        'system': system,
+        'machine': machine,
+        'is_windows': system == 'windows',
+        'is_macos': system == 'darwin',
+        'is_linux': system == 'linux',
+        'is_64bit': machine in ['x86_64', 'amd64', 'arm64', 'aarch64'],
+        'is_arm': machine in ['arm64', 'aarch64', 'arm'],
+        'is_github': os.getenv('GITHUB_ACTIONS') == 'true'
+    }
+    
+    return platform_info
+
+
+def get_github_info():
+    """获取GitHub环境信息
+    
+    Returns:
+        dict: GitHub环境信息
+    """
+    return {
+        'sha': os.getenv('GITHUB_SHA', ''),
+        'short_sha': os.getenv('GITHUB_SHA', '')[:7] if os.getenv('GITHUB_SHA') else '',
+        'ref': os.getenv('GITHUB_REF', ''),
+        'repository': os.getenv('GITHUB_REPOSITORY', ''),
+        'workflow': os.getenv('GITHUB_WORKFLOW', ''),
+        'run_id': os.getenv('GITHUB_RUN_ID', ''),
+        'run_number': os.getenv('GITHUB_RUN_NUMBER', '')
+    }
+
+
+def create_version_file(script_dir, version, platform_info=None, github_info=None):
     """创建Windows版本信息文件
     
     Args:
         script_dir: 脚本目录
         version: 版本号
+        platform_info: 平台信息
+        github_info: GitHub环境信息
     
     Returns:
         str: 版本文件路径
     """
+    # 构建文件描述
+    base_description = "一个简单的命令行工具，用于获取和显示一言(Hitokoto)语句。支持从在线API获取或使用本地语句包。"
+    
+    if platform_info and platform_info.get('is_github'):
+        file_description = base_description + " Github构建版本，未经测试，可能不稳定或不可用。"
+    else:
+        file_description = base_description
+    # 处理版本号格式，确保是数字格式
+    if version.startswith('git-'):
+        # GitHub版本使用1.0.0.0格式
+        version_tuple = "1, 0, 0, 0"
+        display_version = version
+    else:
+        # 标准版本号处理
+        version_parts = version.split('.')
+        # 确保有4个部分
+        while len(version_parts) < 4:
+            version_parts.append('0')
+        # 只取前4个部分，并确保都是数字
+        version_nums = []
+        for part in version_parts[:4]:
+            try:
+                version_nums.append(str(int(part)))
+            except ValueError:
+                version_nums.append('0')
+        version_tuple = ', '.join(version_nums)
+        display_version = version
+    
     version_content = f'''# UTF-8
 #
 # For more details about fixed file info 'ffi' see:
@@ -32,8 +104,8 @@ VSVersionInfo(
   ffi=FixedFileInfo(
     # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
     # Set not needed items to zero 0.
-    filevers=({version.replace('.', ', ')}, 0),
-    prodvers=({version.replace('.', ', ')}, 0),
+    filevers=({version_tuple}),
+    prodvers=({version_tuple}),
     # Contains a bitmask that specifies the valid bits 'flags'r
     mask=0x3f,
     # Contains a bitmask that specifies the Boolean attributes of the file.
@@ -56,13 +128,13 @@ VSVersionInfo(
       StringTable(
         u'080404B0',
         [StringStruct(u'CompanyName', u'MiaowCham'),
-        StringStruct(u'FileDescription', u'一个简单的命令行工具，用于获取和显示一言(Hitokoto)语句。支持从在线API获取或使用本地语句包。'),
-        StringStruct(u'FileVersion', u'{version}'),
+        StringStruct(u'FileDescription', u'{file_description}'),
+        StringStruct(u'FileVersion', u'{display_version}'),
         StringStruct(u'InternalName', u'hitokoto'),
         StringStruct(u'LegalCopyright', u'MIT License'),
         StringStruct(u'OriginalFilename', u'hitokoto.exe'),
         StringStruct(u'ProductName', u'Hitokoto-Cli'),
-        StringStruct(u'ProductVersion', u'{version}'),
+        StringStruct(u'ProductVersion', u'{display_version}'),
         StringStruct(u'Language', u'中文')])
       ]), 
     VarFileInfo([VarStruct(u'Translation', [2052, 1200])])
@@ -113,6 +185,14 @@ def build_executable(args):
     Args:
         args: 命令行参数
     """
+    # 获取平台和GitHub信息
+    platform_info = detect_platform()
+    github_info = get_github_info()
+    
+    print(f"检测到平台: {platform_info['system']} {platform_info['machine']}")
+    if platform_info['is_github']:
+        print(f"GitHub Actions环境，提交SHA: {github_info['short_sha']}")
+    
     # 获取脚本所在目录
     script_dir = Path(__file__).parent.absolute()
     
@@ -161,7 +241,18 @@ def build_executable(args):
         print("警告: 图标文件icon.ico不存在，将不会设置应用程序图标")
         icon_option = []
     else:
-        icon_option = ["--icon=icon.ico"]
+        if platform_info['is_windows']:
+            icon_option = ["--icon=icon.ico"]
+        elif platform_info['is_macos']:
+            # macOS使用icns格式，如果没有则跳过
+            icns_file = script_dir / "icon.icns"
+            if icns_file.exists():
+                icon_option = [f"--icon={icns_file}"]
+            else:
+                print("警告: macOS需要icon.icns文件，将不会设置应用程序图标")
+                icon_option = []
+        else:
+            icon_option = []  # Linux通常不需要图标文件
     
     # 根据参数决定构建模式
     build_mode = "--onefile" if args.onefile else "--onedir"
@@ -175,13 +266,37 @@ def build_executable(args):
         "--noconfirm",
     ]
     
+    # 添加平台特定的优化选项
+    if platform_info['is_macos']:
+        # macOS特定选项
+        if hasattr(args, 'universal2') and args.universal2:
+            # 检查是否支持Universal2构建
+            try:
+                # 尝试检查Python是否为Universal2版本
+                result = subprocess.run(['file', sys.executable], capture_output=True, text=True)
+                if 'universal' in result.stdout.lower() or 'fat' in result.stdout.lower():
+                    cmd.extend(["--target-arch=universal2"])
+                    print("启用macOS Universal2构建（Intel + Apple Silicon）")
+                else:
+                    print("警告: 当前Python不支持Universal2，将使用当前架构构建")
+                    print(f"Python架构信息: {result.stdout.strip()}")
+            except Exception as e:
+                print(f"警告: 无法检测Python架构，跳过Universal2构建: {e}")
+        cmd.extend(["--osx-bundle-identifier=com.miaowcham.hitokoto"])
+    elif platform_info['is_linux']:
+        # Linux特定选项
+        cmd.extend(["--strip"])  # 减小文件大小
+    elif platform_info['is_windows']:
+        # Windows特定选项
+        cmd.extend(["--console"])  # 确保控制台应用
+    
     # 添加图标参数（如果图标文件存在）
     cmd.extend(icon_option)
     
     # 添加版本信息（仅在Windows下有效）
-    if hasattr(args, 'version') and args.version and sys.platform.startswith("win"):
+    if hasattr(args, 'version') and args.version and platform_info['is_windows']:
         version_info = [
-            f"--version-file={create_version_file(script_dir, args.version)}"
+            f"--version-file={create_version_file(script_dir, args.version, platform_info, github_info)}"
         ]
         cmd.extend(version_info)
     
@@ -199,7 +314,7 @@ def build_executable(args):
         print("构建成功!")
         
         # 清理临时版本文件
-        if hasattr(args, 'version') and args.version and sys.platform.startswith("win"):
+        if hasattr(args, 'version') and args.version and platform_info['is_windows']:
             version_file = script_dir / "version_info.txt"
             if version_file.exists():
                 try:
@@ -208,19 +323,15 @@ def build_executable(args):
                 except Exception as e:
                     print(f"清理版本文件失败: {e}")
         
-        # 根据构建模式输出可执行文件路径
+        # 根据构建模式和平台输出可执行文件路径
+        exe_name = "hitokoto.exe" if platform_info['is_windows'] else "hitokoto"
+        
         if args.onefile:
             # 单文件模式
-            if sys.platform.startswith("win"):
-                exe_path = dist_dir / "hitokoto.exe"
-            else:
-                exe_path = dist_dir / "hitokoto"
+            exe_path = dist_dir / exe_name
         else:
             # 目录模式
-            if sys.platform.startswith("win"):
-                exe_path = dist_dir / "hitokoto" / "hitokoto.exe"
-            else:
-                exe_path = dist_dir / "hitokoto" / "hitokoto"
+            exe_path = dist_dir / "hitokoto" / exe_name
         
         print(f"可执行文件位于: {exe_path}")
         if hasattr(args, 'version') and args.version:
@@ -236,7 +347,18 @@ def build_executable(args):
 
 def main():
     """主函数"""
-    print("=== 一言(Hitokoto)构建脚本 ===")
+    # 设置UTF-8编码输出，避免Windows下的编码问题
+    import sys
+    import io
+    if sys.platform.startswith('win'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    
+    print("=== Hitokoto Multi-Platform Build Script ===")
+    
+    # 获取平台和GitHub信息
+    platform_info = detect_platform()
+    github_info = get_github_info()
     
     # 解析命令行参数
     import argparse
@@ -250,7 +372,16 @@ def main():
     build_mode_group.add_argument("--onefile", action="store_true", help="使用单文件模式构建（默认）")
     build_mode_group.add_argument("--onedir", action="store_true", dest="onedir", help="使用目录模式构建")
     
+    # 添加平台特定选项
+    if platform_info['is_macos']:
+        parser.add_argument("--universal2", action="store_true", help="构建macOS Universal2二进制文件（Intel + Apple Silicon）")
+    
     args = parser.parse_args()
+    
+    # 在GitHub环境中自动设置版本
+    if platform_info['is_github'] and not args.version and github_info['short_sha']:
+        args.version = f"git-{github_info['short_sha']}"
+        print(f"GitHub环境检测到，自动设置版本为: {args.version}")
     
     # 如果两个模式都没有指定，默认使用单文件模式
     if not args.onedir:
@@ -276,16 +407,26 @@ def main():
         success = build_executable(args)
         if success:
             version_info = f" (版本: {args.version})" if hasattr(args, 'version') and args.version else ""
+            platform_name = f"{platform_info['system'].title()} {platform_info['machine']}"
+            
             if args.onefile:
-                print(f"\n构建完成! 可以在dist目录中找到hitokoto.exe单文件可执行程序{version_info}。")
+                exe_name = "hitokoto.exe" if platform_info['is_windows'] else "hitokoto"
+                print(f"\n🎉 构建完成! 可以在dist目录中找到{exe_name}单文件可执行程序{version_info}。")
             else:
-                print(f"\n构建完成! 可以在dist/hitokoto目录中找到可执行文件及其依赖{version_info}。")
+                print(f"\n🎉 构建完成! 可以在dist/hitokoto目录中找到可执行文件及其依赖{version_info}。")
+            
+            print(f"📋 平台信息: {platform_name}")
+            if platform_info['is_github']:
+                print(f"🔧 GitHub Actions构建，提交: {github_info['short_sha']}")
+            if platform_info['is_macos'] and hasattr(args, 'universal2') and args.universal2:
+                print(f"🍎 macOS Universal2构建（支持Intel和Apple Silicon）")
+            
             return 0
         else:
-            print("\n构建失败! 请检查上述错误信息。")
+            print("\n❌ 构建失败! 请检查上述错误信息。")
             return 1
     else:
-        print("\n由于PyInstaller问题，无法继续构建。")
+        print("\n❌ 由于PyInstaller问题，无法继续构建。")
         print("请手动安装PyInstaller后重试: pip install --user pyinstaller")
         return 1
 
