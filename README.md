@@ -21,10 +21,7 @@
 - 支持导出多条语句到文件
 - 完整的日志记录功能
 
-## 自行构建
-
-<details>
-<summary>点击展开自行构建说明</summary>
+## 项目使用
 
 ### 项目依赖
 
@@ -38,6 +35,9 @@
 
 开发依赖
 - pyinstaller>=5.6.2 （用于构建可执行文件）
+
+<details>
+<summary>点击展开全部内容</summary>
 
 ### 克隆项目
 首先请下载或克隆本仓库
@@ -55,11 +55,13 @@ pip install -r requirements.txt
 ```bash
 python hitokoto_cli.py
 ```
+</details>
 
-### 构建可执行文件
+## 构建可执行文件
 
-> [!note]
+> [!note]  
 > 除 Windows x64 平台外，其他平台均未经测试。Github Actions 已经成功在 macOS 14 (arm64) 和 Ubuntu 22.04 上成功构建，但不保证构建产物的可用性。
+>
 > 有关构建详的细描述请见 [BUILD.md](BUILD.md)
 
 使用 `build_exe.py` 脚本可以快捷对项目进行构建。
@@ -68,8 +70,6 @@ python hitokoto_cli.py
 python build_exe.py
 ```
 构建完成后，在 `dist` 目录下会生成可执行文件。
-
-</details>
 
 ## 使用方法
 
