@@ -68,7 +68,6 @@ python build_exe.py --skip-check
 4. 点击 "Run workflow" 按钮
 5. 选择构建选项：
    - **构建模式**: `onefile`（单文件）或 `onedir`（目录）
-   - **创建 Release**: 是否自动创建 GitHub Release
 
 ### 构建矩阵
 
@@ -76,12 +75,12 @@ python build_exe.py --skip-check
 
 | 平台 | 操作系统 | 架构 | Python版本 | 状态 |
 |------|----------|------|------------|------|
-| Windows x86 | Windows Server 2022 | x86 | 3.9 | ✅ 启用 |
-| Windows x64 | Windows Server 2022 | x64 | 3.9 | ✅ 启用 |
-| macOS x64 | macOS Latest | x86_64 | 3.9 | 💤 已注释（可选启用） |
-| macOS ARM64 | macOS Latest | aarch64 | 3.9 | 💤 已注释（可选启用） |
-| macOS Universal2 | macOS Latest | Universal2 | 3.9 | ✅ 启用 |
-| Linux x64 | Ubuntu 22.04 | x64 | 3.9 | ✅ 启用 |
+| Windows x86 | Windows Server 2022 | x86 | 3.9 | ✅ 启用，通过 |
+| Windows x64 | Windows Server 2022 | x64 | 3.9 | ✅ 启用，通过 |
+| macOS x64 | macOS Latest | x86_64 | 3.9 | ✅ 启用，通过 |
+| macOS ARM64 | macOS Latest | aarch64 | 3.9 | ✅ 启用，通过 |
+| macOS Universal2 | macOS Latest | Universal2 | 3.9 | ✅ 启用，疑似不通过 |
+| Linux x64 | Ubuntu 22.04 | x64 | 3.9 | ✅ 启用，通过 |
 
 ### 构建产物
 
@@ -98,6 +97,8 @@ python build_exe.py --skip-check
 - `hitokoto-macOS-arm64-{commit}` - macOS Apple Silicon专用可执行文件
 
 > 💡 **提示**: 要启用可选的macOS架构构建，请在 `.github/workflows/build.yml` 中取消相应行的注释。
+
+构建产物将作为 GitHub Actions artifacts 上传，可在工作流程运行页面下载。
 
 ### 版本信息
 
