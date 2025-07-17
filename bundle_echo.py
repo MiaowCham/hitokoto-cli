@@ -10,7 +10,7 @@ import sys
 import json
 import random
 import jsonlines
-import yaml
+
 from typing import Dict, List, Optional, Any
 from loguru import logger
 
@@ -432,34 +432,7 @@ def format_sentence_output(sentence, include_source=False, output_format="text")
     return hitokoto
 
 
-def load_bundle_config(bundle_dir="bundle"):
-    """加载语句包配置文件"""
-    if bundle_dir == "bundle":
-        bundle_dir = get_bundle_directory()
-    
-    config_path = os.path.join(bundle_dir, 'config.yaml')
-    
-    # 默认配置
-    default_config = {
-        'no-local': False
-    }
-    
-    if not os.path.exists(config_path):
-        return default_config
-    
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f) or {}
-        
-        # 合并默认配置
-        for key, value in default_config.items():
-            if key not in config:
-                config[key] = value
-        
-        return config
-    except Exception as e:
-        print(f"警告：读取配置文件失败，使用默认配置: {e}")
-        return default_config
+
 
 
 def check_bundle_exists(bundle_dir="bundle"):
@@ -476,25 +449,8 @@ def should_use_local_bundle(force_bundle=False, has_bundle=False):
     if not has_bundle:
         return False
     
-    # 读取配置
-    config = load_bundle_config()
-    no_local = config.get('no-local', False)
-    
-    if force_bundle and no_local:
-        # 强制使用本地包但配置禁用，需要用户确认
-        print("警告：配置文件中设置了 no-local: True，本地语句包被禁用")
-        try:
-            input("按回车键强制使用本地语句包，或按 Ctrl+C 取消: ")
-            return True
-        except KeyboardInterrupt:
-            print("\n已取消，将使用API")
-            return False
-    elif force_bundle:
-        return True
-    elif no_local:
-        return False
-    else:
-        return True
+    # 简化逻辑：如果强制使用本地包或有本地包就使用
+    return force_bundle or has_bundle
 
 
 if __name__ == "__main__":
