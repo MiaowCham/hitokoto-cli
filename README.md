@@ -36,9 +36,6 @@
 开发依赖
 - pyinstaller>=5.6.2 （用于构建可执行文件）
 
-<details>
-<summary>点击展开全部内容</summary>
-
 ### 克隆项目
 首先请下载或克隆本仓库
 ```bash
@@ -55,7 +52,6 @@ pip install -r requirements.txt
 ```bash
 python hitokoto_cli.py
 ```
-</details>
 
 ## 构建可执行文件
 
