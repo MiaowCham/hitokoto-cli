@@ -28,9 +28,7 @@
 运行依赖
 - Python>=3.6
 - requests>=2.25.0
-- click>=8.0.0
 - jsonlines>=3.0.0
-- PyYAML>=6.0.0
 - loguru>=0.7.0
 
 开发依赖
@@ -73,7 +71,9 @@ python build_exe.py
 > 前往 [Release](https://github.com/MiaowCham/hitokoto-cli/releases) 可以下载构建好的 Windows x64 可执行文件。  
 > 或者前往 [Github Actions](https://github.com/MiaowCham/hitokoto-cli/actions/workflows/build.yml) 获取最新的多平台构建。
 > 构建版本请将 `hitokoto_cli.py` 替换为 `.\hitokoto.exe`。  
-> 将构建版本所处目录添加至环境变量中，即可在任意目录使用 `hitokoto` 命令。
+> 将构建版本所处目录添加至环境变量中，即可在任意目录使用 `hitokoto` 命令。[^1]
+
+[^1]: 当然如果你就是想直接使用 Python 源码的话，我记得各个系统都有自定义命令的方法（具体办法自己百度！），把 `python 完整路径/hitokoyo_cli.py` 设置一个你喜欢的命令名称，也是可以实现在任意目录使用 `hitokoto` 。
 
 ### 基本用法
 
@@ -90,18 +90,23 @@ python hitokoto_cli.py
 
 ```
 选项:
-  -a, --api [in|cn]        强制调用指定API (in=国际, cn=中国)
-  -g, --get-bundle         获取语句包
-  -b, --bundle             强制使用语句包
-  -t, --type TEXT          语句类型 (a-l)
-  --min INTEGER            最小字符数
-  --max INTEGER            最大字符数
-  -f, --from               在输出中包含来源
-  -i, --id TEXT            精确查找指定语句ID/UUID (仅支持本地)
-  --encode [text|json]     输出格式
-  -c, --check-bundle       检查语句包状态
-  --debug                  启用调试模式
-  --help                   显示帮助信息
+  -h, --help                     显示帮助信息
+  -a, --api [{in,cn}]            强制调用指定API (默认:in=国际, cn=中国)
+  -b, --bundle                   强制使用语句包
+  -t, --type [TYPE]              语句类型 (默认:none=随机, a-l, 或输入 help 查看详细说明)
+  --min MIN_LENGTH               指定最小字符数
+  --max MAX_LENGTH               指定最大字符数
+  -f, --from                     在输出中包含来源
+  -i, --id SENTENCE_ID           精确查找指定语句ID/UUID (仅支持本地)
+  --encode {text,json}           输出格式
+  -c, --check-bundle             检查语句包状态
+  -d, --delete-bundle            删除本地语句包
+  -u, --update-index             更新索引文件
+  -g, --get-bundle [{of,gh,jsd}] 获取语句包 (默认:of, 可选:gh, jsd)
+  -e, --echo [ECHO_COUNT]        输出至文件的语句数量，默认10条
+  -p, --path ECHO_PATH           输出文件路径
+  --debug                        启用调试模式，显示详细日志信息
+  -v, --version                  显示版本信息
 ```
 
 ### 语句类型说明
@@ -162,10 +167,18 @@ python hitokoto_cli.py -a in
 
 </details>
 
-## 许可证
+## 许可证与声明
 
-本项目采用 MIT 许可证。
+> [!note]
+本项目大部分代码来自 [Trae Pro](https://www.trae.ai/) 的 Claude-4 及 Claude-3.7，请注意辨别
+
+本项目采用 CC0-1.0 许可证。  
+由于本项目主要使用 AI 实现代码，故将此项目开放至公共领域。  
 
 ## 致谢
 
-感谢 [一言开发者](https://hitokoto.cn/) 提供的API和语句数据。
+感谢 [Trae 编辑器](https://www.trae.ai/)，花了 3$ 就能看各种大模型自己完成项目，~~我都不用动手（bush~~
+
+### 特别感谢: [一言官方](https://hitokoto.cn/)
+  - 提供了 [API 服务](https://developer.hitokoto.cn/sentence/)
+  - 提供了[语句包下载服务](https://sentences-bundle.hitokoto.cn/)

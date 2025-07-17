@@ -1,8 +1,9 @@
+# 安装依赖命令
+# pip install -r requirements.txt
+
 # 运行依赖
 requests>=2.25.0
-click>=8.0.0
 jsonlines>=3.0.0
-PyYAML>=6.0.0
 loguru>=0.7.0
 
 # 开发依赖

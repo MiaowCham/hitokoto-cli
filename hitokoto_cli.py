@@ -1,6 +1,6 @@
 import os
 import sys
-import click
+import argparse
 from loguru import logger
 from hitokoto_api import get_hitokoto_from_api, format_hitokoto_output
 from bundle_get import get_bundle
@@ -16,9 +16,29 @@ logger.remove()
 # 添加一个空的处理器，不输出任何内容
 logger.add(sys.stderr, level="ERROR", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
 
+VERSION = "0.2.0"
 
-def validate_sentence_type(ctx, param, value):
-    """验证语句类型参数的回调函数"""
+# 检查 PyInstaller 打包环境并为版本信息加入前缀
+def is_pyinstaller():
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+if is_pyinstaller():
+    VERSION = f"build {VERSION}"
+
+# 版本信息
+VERSION_INFO = f"""一言(Hitokoto)命令行工具
+一个简单的命令行工具，用于获取和显示一言(Hitokoto)语句。支持从在线API获取或使用本地语句包。
+
+版本: hitokoto-cli {VERSION}
+项目仓库地址: https://github.com/MiaowCham/hitokoto-cli
+
+特别感谢: 一言官方(https://hitokoto.cn/)
+  - 提供了 API 服务(https://developer.hitokoto.cn/sentence/)
+  - 提供了语句包下载服务(https://sentences-bundle.hitokoto.cn/)"""
+
+def validate_sentence_type(value):
+    """验证语句类型参数的函数"""
+    import random
+    
     if value is None:
         return None
     
@@ -44,9 +64,16 @@ def validate_sentence_type(ctx, param, value):
     
     valid_types = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']
     
-    if value.lower() == 'help':
+    if value == 'none':
+        # -t 无参数的情况：显示帮助并随机选择
         show_type_help()
-        ctx.exit(0)
+        random_type = random.choice(valid_types)
+        print(f"\n错误：-t 参数需要指定类型，请使用 a-l 中的任意字母。")
+        print(f"本次将随机选择类型 '{random_type}' 继续执行。\n")
+        return random_type
+    elif value.lower() == 'help':
+        show_type_help()
+        sys.exit(0)
     elif value not in valid_types:
         show_type_help()
         print(f"\n错误：无效的语句类型 '{value}'，请使用 a-l 中的任意字母。")
@@ -56,28 +83,103 @@ def validate_sentence_type(ctx, param, value):
     return value
 
 
-@click.command()
-@click.option('-a', '--api', type=click.Choice(['in', 'cn']), help='强制调用指定API (in=国际, cn=中国)')
-@click.option('-b', '--bundle', 'force_bundle', is_flag=True, help='强制使用语句包')
-@click.option('-t', '--type', 'sentence_type', default=None, callback=validate_sentence_type, help='语句类型 (a-l, 或输入 help 查看详细说明)')
-@click.option('--min', 'min_length', type=int, help='最小字符数')
-@click.option('--max', 'max_length', type=int, help='最大字符数')
-@click.option('-f', '--from', 'include_source', is_flag=True, help='在输出中包含来源')
-@click.option('-i', '--id', 'sentence_id', help='精确查找指定语句ID/UUID (仅支持本地)')
-@click.option('--encode', type=click.Choice(['text', 'json']), default='text', help='输出格式')
-@click.option('-c', '--check-bundle', 'check_bundle_flag', is_flag=True, help='检查语句包状态')
-@click.option('-d', '--delete-bundle', 'delete_bundle_flag', is_flag=True, help='删除本地语句包')
-@click.option('-u', '--update-index', 'update_index_flag', is_flag=True, help='更新索引文件')
-@click.option('-g', '--get-bundle', 'get_bundle_source', type=click.Choice(['of', 'gh', 'jsd']), flag_value='of', default=None, help='获取语句包 (默认:of, 可选:gh, jsd)')
-@click.option('-e', '--echo', 'echo_count', type=str, is_flag=False, flag_value='10', help='输出至文件的语句数量，默认10条')
-@click.option('-p', '--path', 'echo_path', type=str, help='输出文件路径')
-@click.option('--debug', is_flag=True, help='启用调试模式，显示详细日志信息')
-def main(api, force_bundle, sentence_type, min_length, max_length, include_source, sentence_id, encode, check_bundle_flag, delete_bundle_flag, update_index_flag, get_bundle_source, echo_count, echo_path, debug):
-    """
-    简易的一言综合工具
+def create_parser():
+    """创建命令行参数解析器"""
+    parser = argparse.ArgumentParser(
+        description='一言(Hitokoto)命令行工具\n一个简单的命令行工具，用于获取和显示一言(Hitokoto)语句。支持从在线API获取或使用本地语句包。',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     
-    获取一言的命令行工具，支持API调用和本地语句包。
-    """
+    # -a, --api 参数，支持无附加参数
+    parser.add_argument('-a', '--api', nargs='?', const='in', default=None,
+                       choices=['in', 'cn'], 
+                       help='强制调用指定API (默认:in=国际, cn=中国)')
+    
+    # -b, --bundle 参数
+    parser.add_argument('-b', '--bundle', action='store_true', 
+                       help='强制使用语句包')
+    
+    # -t, --type 参数，支持无附加参数
+    parser.add_argument('-t', '--type', nargs='?', const='none', default=None,
+                       help='语句类型 (默认:none=随机, a-l, 或输入 help 查看详细说明)')
+    
+    # --min 参数
+    parser.add_argument('--min', type=int, dest='min_length',
+                       help='指定最小字符数')
+    
+    # --max 参数
+    parser.add_argument('--max', type=int, dest='max_length',
+                       help='指定最大字符数')
+    
+    # -f, --from 参数
+    parser.add_argument('-f', '--from', action='store_true', dest='include_source',
+                       help='在输出中包含来源')
+    
+    # -i, --id 参数
+    parser.add_argument('-i', '--id', dest='sentence_id',
+                       help='精确查找指定语句ID/UUID (仅支持本地)')
+    
+    # --encode 参数
+    parser.add_argument('--encode', choices=['text', 'json'], default='text',
+                       help='输出格式')
+    
+    # -c, --check-bundle 参数
+    parser.add_argument('-c', '--check-bundle', action='store_true', dest='check_bundle_flag',
+                       help='检查语句包状态')
+    
+    # -d, --delete-bundle 参数
+    parser.add_argument('-d', '--delete-bundle', action='store_true', dest='delete_bundle_flag',
+                       help='删除本地语句包')
+    
+    # -u, --update-index 参数
+    parser.add_argument('-u', '--update-index', action='store_true', dest='update_index_flag',
+                       help='更新索引文件')
+    
+    # -g, --get-bundle 参数，支持无附加参数
+    parser.add_argument('-g', '--get-bundle', nargs='?', const='of', default=None,
+                       choices=['of', 'gh', 'jsd'], dest='get_bundle_source',
+                       help='获取语句包 (默认:of, 可选:gh, jsd)')
+    
+    # -e, --echo 参数，支持无附加参数
+    parser.add_argument('-e', '--echo', nargs='?', const='10', default=None,
+                       dest='echo_count', help='输出至文件的语句数量，默认10条')
+    
+    # -p, --path 参数
+    parser.add_argument('-p', '--path', dest='echo_path',
+                       help='输出文件路径')
+    
+    # --debug 参数
+    parser.add_argument('--debug', action='store_true',
+                       help='启用调试模式，显示详细日志信息')
+    
+    # -v, --version 参数
+    parser.add_argument('-v', '--version', action='version', version=VERSION_INFO,
+                       help='显示版本信息')
+    
+    return parser
+
+
+def main():
+    """主函数"""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    # 提取参数
+    api = args.api
+    force_bundle = args.bundle
+    sentence_type = validate_sentence_type(args.type)
+    min_length = args.min_length
+    max_length = args.max_length
+    include_source = args.include_source
+    sentence_id = args.sentence_id
+    encode = args.encode
+    check_bundle_flag = args.check_bundle_flag
+    delete_bundle_flag = args.delete_bundle_flag
+    update_index_flag = args.update_index_flag
+    get_bundle_source = args.get_bundle_source
+    echo_count = args.echo_count
+    echo_path = args.echo_path
+    debug = args.debug
     
     # 处理调试模式
     if debug:
