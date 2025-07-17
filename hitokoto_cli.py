@@ -17,10 +17,49 @@ logger.remove()
 logger.add(sys.stderr, level="ERROR", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
 
 
+def validate_sentence_type(ctx, param, value):
+    """验证语句类型参数的回调函数"""
+    if value is None:
+        return None
+    
+    # 定义帮助显示函数
+    def show_type_help():
+        print("-t 指令帮助：")
+        print("语句类型说明：")
+        print("  a: 动画")
+        print("  b: 漫画")
+        print("  c: 游戏")
+        print("  d: 文学")
+        print("  e: 原创")
+        print("  f: 来自网络")
+        print("  g: 其他")
+        print("  h: 影视")
+        print("  i: 诗词")
+        print("  j: 网易云")
+        print("  k: 哲学")
+        print("  l: 抖机灵")
+        print("\n使用方法：")
+        print("  -t a     # 获取动画类型的语句")
+        print("  -t help  # 显示此帮助信息")
+    
+    valid_types = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']
+    
+    if value.lower() == 'help':
+        show_type_help()
+        ctx.exit(0)
+    elif value not in valid_types:
+        show_type_help()
+        print(f"\n错误：无效的语句类型 '{value}'，请使用 a-l 中的任意字母。")
+        print("本次将使用默认设置（随机类型）继续执行。\n")
+        return None  # 返回None表示使用默认值
+    
+    return value
+
+
 @click.command()
 @click.option('-a', '--api', type=click.Choice(['in', 'cn']), help='强制调用指定API (in=国际, cn=中国)')
 @click.option('-b', '--bundle', 'force_bundle', is_flag=True, help='强制使用语句包')
-@click.option('-t', '--type', 'sentence_type', help='语句类型 (a-l)')
+@click.option('-t', '--type', 'sentence_type', default=None, callback=validate_sentence_type, help='语句类型 (a-l, 或输入 help 查看详细说明)')
 @click.option('--min', 'min_length', type=int, help='最小字符数')
 @click.option('--max', 'max_length', type=int, help='最大字符数')
 @click.option('-f', '--from', 'include_source', is_flag=True, help='在输出中包含来源')
@@ -47,6 +86,8 @@ def main(api, force_bundle, sentence_type, min_length, max_length, include_sourc
         # 添加新的处理器，设置日志级别为DEBUG
         logger.add(sys.stderr, level="DEBUG", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
         logger.debug("调试模式已启用")
+    
+    # 注意：语句类型参数验证已在 validate_sentence_type 回调函数中处理
     
     # 处理语句包获取操作
     if get_bundle_source:
