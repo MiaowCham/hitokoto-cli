@@ -175,6 +175,15 @@ python hitokoto_cli.py -a in
 本项目采用 CC0-1.0 许可证。  
 由于本项目主要使用 AI 实现代码，故将此项目开放至公共领域。  
 
+`icon.ico` 是 [一言](hitokoto.cn) 的logo，根据其开发者中心使用的 MIT 协议共享，用于 hitokoto-cli 项目的图标  
+hitokoto-cli 是开源项目，不包含商业用途，且基于 CC0 1.0 协议完全共享至公共领域
+
+hitokoto 开发者中心版权声明：
+```
+本文档遵循 MIT 协议
+© 2024 MoeTeam All Rights Reserved.
+```
+
 ## 致谢
 
 感谢 [Trae 编辑器](https://www.trae.ai/)，花了 3$ 就能看各种大模型自己完成项目，~~我都不用动手（bush~~
