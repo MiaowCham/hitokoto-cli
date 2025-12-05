@@ -16,7 +16,7 @@ logger.remove()
 # 添加一个空的处理器，不输出任何内容
 logger.add(sys.stderr, level="ERROR", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
 
-VERSION = "0.2.0"
+VERSION = "1.0.0"
 
 # 检查 PyInstaller 打包环境并为版本信息加入前缀
 def is_pyinstaller():
